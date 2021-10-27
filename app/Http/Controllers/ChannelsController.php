@@ -18,16 +18,6 @@ class ChannelsController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -35,29 +25,46 @@ class ChannelsController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string',
+        ]);
+
+        $channel = \App\Models\Channel::where('name', $validated['name'])->exists();
+        if ($channel) {
+            abort(400, 'Channel name already exists');
+        }
+
+        $channel = new Channel;
+        $channel->fill([
+            'name' => $validated['name'],
+            'user_id' => config('app.auth_user_id'),
+        ])->save();
+
+        return response()->json($channel->toArray());
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Channel  $channel
+     * @param  string  $channel
      * @return \Illuminate\Http\Response
      */
-    public function show(Channel $channel)
+    public function show($channelId)
     {
-        //
-    }
+        $channel = \App\Models\Channel::find($channelId);
+        if (!$channel) {
+            $channel = \App\Models\Channel::where('name', $channelId)->first();
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Channel  $channel
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Channel $channel)
-    {
-        //
+            if (!$channel) {
+                abort(404, 'Channel not found');
+            }
+        }
+
+        $channelResource = $channel->toArray();
+        $channelResource['user'] = $channel->user;
+        $channelResource['messages'] = $channel->messages;
+
+        return response()->json($channelResource);
     }
 
     /**
@@ -75,11 +82,28 @@ class ChannelsController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Channel  $channel
+     * @param  string  $channel
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Channel $channel)
+    public function destroy($channelId)
     {
-        //
+        $channel = \App\Models\Channel::find($channelId);
+        if (!$channel) {
+            $channel = \App\Models\Channel::where('name', $channelId)->first();
+
+            if (!$channel) {
+                abort(404, 'Channel not found');
+            }
+        }
+
+        $authUser = config('app.auth_user_id');
+        if ($authUser !== $channel->user_id) {
+            abort(400, 'Only the creator can delete a Channel');
+        }
+
+        \App\Models\Message::where('channel_id', $channel->id)->delete();
+        \App\Models\Channel::where('id', $channel->id)->delete();
+
+        return response()->json(null, 200);
     }
 }

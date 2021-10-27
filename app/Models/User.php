@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'first_name',
+        'last_name',
+        'handle',
+        'email',
     ];
 
     /**
@@ -41,4 +45,20 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function messages()
+    {
+        return $this->hasMany(\App\Models\Message::class);
+    }
+
+    public function channels()
+    {
+        return $this->hasMany(\App\Models\Channel::class);
+    }
+
+    public function getMentionsAttribute()
+    {
+        return \App\Models\Message::where('user_id', '!=', $this->id)
+            ->whereRaw("text REGEXP '@{$this->handle}'")->get();
+    }
 }

@@ -18,16 +18,6 @@ class MessagesController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -35,7 +25,28 @@ class MessagesController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'text'          => 'required',
+            'channel_id'    => 'required',
+        ]);
+
+        $channel = \App\Models\Channel::find($validated['channel_id']);
+        if (!$channel) {
+            $channel = \App\Models\Channel::where('name', $validated['channel_id'])->first();
+
+            if (!$channel) {
+                abort(404, 'Channel not found');
+            }
+        }
+
+        $message = new Message;
+        $message->fill([
+            'text' => $validated['text'],
+            'channel_id' => $channel->id,
+            'user_id' => config('app.auth_user_id'),
+        ])->save();
+
+        return response()->json($message->toArray());
     }
 
     /**

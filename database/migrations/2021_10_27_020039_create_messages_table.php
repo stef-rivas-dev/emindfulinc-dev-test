@@ -20,6 +20,8 @@ class CreateMessagesTable extends Migration
 
             $table->unsignedBigInteger('channel_id');
 
+            $table->text('text');
+
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users');

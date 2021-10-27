@@ -2,7 +2,9 @@
 
 namespace App\Exceptions;
 
+use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -27,15 +29,40 @@ class Handler extends ExceptionHandler
         'password_confirmation',
     ];
 
-    /**
-     * Register the exception handling callbacks for the application.
-     *
-     * @return void
-     */
-    public function register()
+    public function render($request, Throwable $e)
     {
-        $this->reportable(function (Throwable $e) {
-            //
-        });
+        $code = 500;
+
+        // dump('debug', $e->getMessage(), $e);
+
+        $classname = get_class($e);
+        if ($pos = strrpos($classname, '\\')) {
+            $classname = substr($classname, $pos + 1);
+        };
+
+        if ($this->isHttpException($e)) {
+            return response()->json([
+                'error' => $e->getMessage() ?: $classname,
+            ], $e->getStatusCode());
+        }
+
+        switch ($classname) {
+            case 'MethodNotAllowedHttpException':
+            case 'NotFoundHttpException':
+                $code = 400;
+                $message = 'User exception: ' . $e->getMessage();
+                break;
+            case 'ValidationException':
+                $code = 400;
+                $authUser = config('app.auth_user_id');
+                $message = !isset($authUser) ? 'Unauthenticated' : 'User exception: ' . $e->getMessage();
+                break;
+            default:
+                $message = $e->getMessage();
+        }
+
+        return response()->json([
+            'error' => $message,
+        ], $code);
     }
 }
