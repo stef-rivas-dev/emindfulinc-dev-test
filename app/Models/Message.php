@@ -24,4 +24,11 @@ class Message extends Model
     {
         return $this->belongsTo(\App\Models\Channel::class);
     }
+
+    public function getTextAttribute($val)
+    {
+        $locale = config('app.locale');
+
+        return $val . ($locale !== 'en' ? " ($locale)" : '');
+    }
 }
